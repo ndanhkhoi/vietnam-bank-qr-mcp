@@ -1,19 +1,25 @@
 # QR Code Styling Config
 
-**Library:** `qr-code-styling` (npm) — browser-side QR rendering với custom dots, gradients, logos.
-**File:** `templates/payment-card.html` — loaded via `<script src="../node_modules/qr-code-styling/lib/qr-code-styling.js">`
+`qr-code-styling` is loaded in the browser from `mcp-server/templates/payment-card.html`:
 
-## Current Config (v15 — macOS window variant)
+```html
+<script src="../node_modules/qr-code-styling/lib/qr-code-styling.js"></script>
+```
+
+The template renders from the raw EMVCo QR string in `window.__CARD_DATA__.qr_data`; Python does not pre-render the QR image for the card.
+
+## Current Config
+
+Verify these values against `mcp-server/templates/payment-card.html` before changing them.
 
 ```javascript
 const qrCode = new QRCodeStyling({
   width: 388,
   height: 388,
   type: 'canvas',
-  data: params.qr_data,  // raw EMVCo string from Python
+  data: params.qr_data,
   margin: 10,
 
-  // Dots — round, 3-stop navy gradient
   dotsOptions: {
     type: 'dots',
     gradient: {
@@ -27,10 +33,8 @@ const qrCode = new QRCodeStyling({
     },
   },
 
-  // Background — white
   backgroundOptions: { color: '#ffffff' },
 
-  // Corner markers — green gradient, rounded
   cornersSquareOptions: {
     type: 'extra-rounded',
     gradient: {
@@ -47,7 +51,6 @@ const qrCode = new QRCodeStyling({
     color: '#15803d',
   },
 
-  // Bank logo center — clean, no background dots
   image: params.bank_logo_base64 ? 'data:image/png;base64,' + params.bank_logo_base64 : '',
   imageOptions: {
     crossOrigin: 'anonymous',
@@ -59,12 +62,9 @@ const qrCode = new QRCodeStyling({
 qrCode.append(document.getElementById('qr-canvas'));
 ```
 
-## Scannability
+## Scannability Rules
 
-Styled QR (rounded dots, logo center) vẫn scannable nếu:
-- `imageSize` ≤ 0.25 (logo không quá lớn)
-- Contrast đủ (navy on white = OK)
-- Error correction level đủ (qr-code-styling default = M, đủ cho logo 22%)
-- `hideBackgroundDots: true` — logo cleaner, không cản quét
-
-Nếu QR không quét được → giảm `imageSize` xuống 0.15 hoặc bỏ logo center.
+- Keep `imageSize` at or below `0.25`; the current logo size is `0.22`.
+- Keep navy-on-white contrast for QR dots.
+- Keep `hideBackgroundDots: true` so the centered logo does not interfere with modules.
+- If scanning becomes unreliable, reduce `imageSize` to `0.15` or remove the centered logo.
