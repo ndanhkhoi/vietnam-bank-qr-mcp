@@ -37,7 +37,7 @@
 
 ## MCP Tool Contract
 
-- `generate_payment_card` returns `list[str | Image]` — a JSON summary string plus an `Image` content block (raw PNG bytes). Declared with `structured_output=False` because pydantic cannot schema `Image`.
+- `generate_payment_card` returns a JSON-serialized string containing a `png_path` field (absolute path to the rendered PNG). The agent/client reads the file when needed. This avoids transport truncation that occurs when returning large `Image` content blocks inline.
 - `get_qr_data`, `search_bank`, `get_bank_list`, `update_bank_list_tool` return JSON-serialized strings.
 - Bank not found raises `ToolError` via `_require_bank()` → MCP sets `isError: true` in the response. Do not return error JSON strings.
 - `update_bank_list_tool` catches exceptions from the VietQR API and re-raises as `ToolError` so network failures don't crash the MCP session.

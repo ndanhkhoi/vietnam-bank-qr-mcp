@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 
-from mcp.server.fastmcp import FastMCP, Image
+from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 
 from banks import Bank, get_bank_by_bin, load_banks, search_banks, update_bank_list
-from qr_generator import generate_payment_card as _gen_card, generate_qr_data, sanitize_content
+from qr_generator import generate_qr_data, render_payment_card, sanitize_content
 
 logger = logging.getLogger("napas-qr")
 mcp = FastMCP("napas-qr")
@@ -31,7 +31,7 @@ def _bank_summary(bank: Bank) -> dict:
 
 # ── QR Tools ─────────────────────────────────────────────
 
-@mcp.tool(structured_output=False)
+@mcp.tool()
 def generate_payment_card(
     bank_bin: str,
     account_no: str,
@@ -39,11 +39,12 @@ def generate_payment_card(
     amount: float | None = None,
     order_id: str | None = None,
     payment_content: str | None = None,
-) -> list[str | Image]:
+) -> str:
     """Generate payment card PNG via HTML + Playwright.
 
     Professional card design with QR, bank logo, transfer info.
     Rendered via Playwright at 900x1200 viewport, 2x retina.
+    Returns JSON with a `png_path` field pointing to the rendered file.
 
     Args:
         bank_bin: Bank BIN (6 digits, e.g. 970423)
@@ -58,7 +59,7 @@ def generate_payment_card(
     content = sanitize_content(payment_content)
     name = sanitize_content(account_name) or ""
     qr_data = generate_qr_data(bank_bin, account_no, amount, order_id, content)
-    png_bytes = _gen_card(
+    png_path = render_payment_card(
         qr_data=qr_data,
         bank_name=bank.name,
         bank_code=bank.code,
@@ -68,7 +69,7 @@ def generate_payment_card(
         payment_content=content,
     )
 
-    summary = json.dumps({
+    return json.dumps({
         "bank": bank.short_name,
         "bank_bin": bank.bin,
         "account_no": account_no,
@@ -76,8 +77,8 @@ def generate_payment_card(
         "amount": amount or "user-entered",
         "payment_content": content or "",
         "qr_data": qr_data,
+        "png_path": png_path,
     }, ensure_ascii=False)
-    return [summary, Image(data=png_bytes, format="png")]
 
 
 @mcp.tool()

@@ -151,7 +151,7 @@ def sanitize_content(text: str | None) -> str | None:
 
 # ── Payment card ─────────────────────────────────────────
 
-def generate_payment_card(
+def render_payment_card(
     qr_data: str,
     bank_name: str,
     bank_code: str,
@@ -159,8 +159,8 @@ def generate_payment_card(
     account_name: str = "",
     amount: float | None = None,
     payment_content: str | None = None,
-) -> bytes:
-    """Generate payment card PNG via HTML + Playwright. Returns PNG bytes."""
+) -> str:
+    """Render payment card PNG via HTML + Playwright. Returns PNG absolute path."""
 
     if amount:
         amount_str = f"{amount:,.0f} VNĐ".replace(",", ".")
@@ -177,7 +177,28 @@ def generate_payment_card(
         "amount": amount_str,
     }
 
-    from renderer import read_image_bytes, render_card
+    from renderer import render_card
 
-    png_path = render_card(card_data)
+    return render_card(card_data)
+
+
+def generate_payment_card(
+    qr_data: str,
+    bank_name: str,
+    bank_code: str,
+    account_no: str,
+    account_name: str = "",
+    amount: float | None = None,
+    payment_content: str | None = None,
+) -> bytes:
+    """Generate payment card PNG via HTML + Playwright. Returns PNG bytes.
+
+    Convenience wrapper around render_payment_card() for callers that want
+    inline bytes instead of a file path.
+    """
+    from renderer import read_image_bytes
+
+    png_path = render_payment_card(
+        qr_data, bank_name, bank_code, account_no, account_name, amount, payment_content
+    )
     return read_image_bytes(png_path)

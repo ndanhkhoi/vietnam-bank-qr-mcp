@@ -1,7 +1,7 @@
 ---
 name: qr-transfer
 description: "Create Vietnamese bank transfer QR codes and payment card PNGs. Use whenever the user asks for VietQR, NAPAS QR, bank transfer QR, payment QR, account-number payment cards, or QR for invoices/orders. Not for WiFi, URL, vCard, or non-bank QR codes."
-version: 15.5.0
+version: 15.6.0
 author: vietnam-bank-qr-mcp contributors
 license: MIT
 metadata:
@@ -56,11 +56,13 @@ Server entrypoint: `mcp-server/server.py`.
 
 | Tool | Use |
 |---|---|
-| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Generate QR data plus PNG card. Returns `[JSON summary, Image]` (raw PNG bytes in Image content block). `bank_bin` is the 6-digit BIN. |
+| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Generate QR data plus PNG card. Returns JSON string with a `png_path` field (absolute path). `bank_bin` is the 6-digit BIN. |
 | `get_qr_data(bank_bin, account_no, amount?, order_id?, payment_content?)` | Generate QR data string only, without an image. Returns JSON string. `bank_bin` is the 6-digit BIN. |
 | `search_bank(query)` | Search banks by name, short code, short name, or BIN. Returns JSON string. |
 | `get_bank_list()` | List supported banks. Returns JSON string. |
 | `update_bank_list_tool()` | Refresh banks and logos from VietQR; network mutation. |
+
+`generate_payment_card` returns a file path (not an `Image` content block) to avoid transport truncation when serializing large PNGs. Read the file when you need the image bytes.
 
 Bank not found or API failures raise `ToolError` → MCP client receives `isError: true`. No error JSON strings are returned.
 
@@ -114,9 +116,9 @@ PY
 ## API Pitfalls
 
 - `generate_qr_data(bank_bin=...)` takes the 6-digit BIN; the renderer's `bank_code` dict key takes the short code for logo lookup.
-- `render_card(data)` returns a PNG path, not bytes.
-- `qr_generator.generate_payment_card()` returns raw PNG bytes and wraps `render_card()`.
-- MCP `generate_payment_card` tool returns `list[str | Image]` (JSON summary + Image content block), not a base64 JSON string.
+- `render_card(data)` returns a PNG path (str), not bytes.
+- `render_payment_card()` returns a PNG absolute path; `generate_payment_card()` wraps it and returns bytes.
+- MCP `generate_payment_card` tool returns a JSON string with a `png_path` field, not an `Image` content block.
 - `search_banks()` is plural and returns a list; MCP `search_bank()` is singular and returns JSON.
 - Card `amount` is a preformatted string such as `"10.000.000 VND"`, not a number.
 

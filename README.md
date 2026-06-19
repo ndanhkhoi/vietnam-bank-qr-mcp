@@ -88,11 +88,13 @@ Server dùng stdio transport. Ví dụ cấu hình MCP client:
 
 | Tool | Mục đích |
 |---|---|
-| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Sinh QR payload và render PNG card. Trả `[JSON summary, Image]` (PNG raw bytes trong Image content block). `bank_bin` là BIN 6 số. |
+| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Sinh QR payload và render PNG card. Trả JSON string với field `png_path` (đường dẫn tuyệt đối tới file PNG). `bank_bin` là BIN 6 số. |
 | `get_qr_data(bank_bin, account_no, amount?, order_id?, payment_content?)` | Chỉ sinh QR payload EMVCo, không render ảnh. Trả JSON string. `bank_bin` là BIN 6 số. |
 | `search_bank(query)` | Tìm ngân hàng theo tên, short name, code hoặc BIN. Trả JSON string. |
 | `get_bank_list()` | Liệt kê toàn bộ ngân hàng trong [`banks.json`](mcp-server/banks.json). Trả JSON string. |
 | `update_bank_list_tool()` | Refresh danh sách ngân hàng từ VietQR API và tải logo. Có network write. |
+
+`generate_payment_card` trả `png_path` thay vì `Image` content block để tránh truncation khi serialize qua transport. Agent/client đọc file PNG khi cần hiển thị.
 
 Bank not found hoặc lỗi API sẽ raise `ToolError` → MCP client nhận `isError: true` (không trả JSON error string).
 
@@ -102,7 +104,7 @@ Ví dụ này chạy từ [`mcp-server/`](mcp-server/):
 
 ```python
 from banks import search_banks
-from qr_generator import generate_qr_data, generate_payment_card, sanitize_content
+from qr_generator import generate_qr_data, render_payment_card, sanitize_content
 from renderer import render_card
 
 bank = search_banks("TPBank")[0]
@@ -115,8 +117,8 @@ qr_data = generate_qr_data(
     payment_content=sanitize_content("TEST TRANSFER"),
 )
 
-# Cách 1: dùng generate_payment_card() — trả PNG bytes sẵn dùng.
-png_bytes = generate_payment_card(
+# Cách 1: render_payment_card() — trả absolute path tới PNG.
+png_path = render_payment_card(
     qr_data=qr_data,
     bank_name=bank.name,
     bank_code=bank.code,           # short code cho logo.
@@ -125,8 +127,7 @@ png_bytes = generate_payment_card(
     amount=1000000,
     payment_content="TEST TRANSFER",
 )
-with open("./qr_card.png", "wb") as f:
-    f.write(png_bytes)
+print(png_path)
 
 # Cách 2: render_card() thủ công nếu cần kiểm soát card_data và output path.
 card_data = {
@@ -141,6 +142,8 @@ card_data = {
 path = render_card(card_data, output_path="./qr_card.png")
 print(path)
 ```
+
+Nếu muốn PNG bytes thay vì path, dùng `generate_payment_card()` (wrap `render_payment_card()` + đọc file).
 
 Nếu cần kiểm tra signature thật thay vì đoán:
 
