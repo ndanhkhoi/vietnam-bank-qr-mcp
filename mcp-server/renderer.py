@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 
 
-_CHROMIUM_PATH = os.path.expanduser("~/chromium/chrome-linux/chrome")
+_CHROMIUM_PATH = os.environ.get("CHROMIUM_PATH") or None
 _TEMPLATE = os.path.join(os.path.dirname(__file__), "templates", "payment-card.html")
 _LOGO_CACHE = os.path.join(os.path.dirname(__file__), "assets", "bank_logos")
 
@@ -65,7 +65,7 @@ INJECT_JS = """ + json.dumps(inject_js) + """
 with sync_playwright() as p:
     browser = p.chromium.launch(
         headless=True,
-        executable_path=CHROMIUM_PATH,
+        **({"executable_path": CHROMIUM_PATH} if CHROMIUM_PATH else {}),
         args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
     )
     page = browser.new_page(
@@ -117,8 +117,6 @@ with sync_playwright() as p:
             raise RuntimeError(f"Renderer failed: {result.stderr}")
         return os.path.abspath(output_path)
     except subprocess.TimeoutExpired:
-        # Kill any lingering chromium process
-        subprocess.run(["pkill", "-f", script_path], capture_output=True)
         raise RuntimeError("Renderer timed out after 45s")
     finally:
         try:

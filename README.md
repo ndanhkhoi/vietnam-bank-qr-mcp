@@ -35,15 +35,15 @@ vietnam-bank-qr-mcp/
 - Python 3.11+
 - Node.js 18.18+ cho `qr-code-styling`
 - Python packages: `mcp`, `playwright`
-- Playwright Chromium hoặc Chromium binary tương thích
+- Playwright Chromium (cài qua `playwright install chromium`) hoặc Chromium binary tương thích
 
-Lưu ý: [`renderer.py`](mcp-server/renderer.py) đang hardcode Chromium ở:
+Nếu binary bundled của Playwright không khả dụng (ví dụ sandbox/CI), đặt env var trỏ tới Chromium thật:
 
-```text
-~/chromium/chrome-linux/chrome
+```bash
+export CHROMIUM_PATH=/path/to/chrome
 ```
 
-Nếu máy không có binary này, sửa `_CHROMIUM_PATH` trong [`mcp-server/renderer.py`](mcp-server/renderer.py) sang path Chromium thực tế, ví dụ path trong `~/.cache/ms-playwright/...` sau khi chạy `playwright install chromium`.
+Khi không set, [`renderer.py`](mcp-server/renderer.py) sẽ fallback về Chromium bundled của Playwright.
 
 ## Installation
 
@@ -197,6 +197,10 @@ Vì vậy renderer phải dùng `page.goto("file://...")` để relative paths h
 
 Renderer screenshot `body`, không phải `.card` hay `.mac-window`, để giữ padding 16px và shadow/radius của card.
 
+### Amount `0` hoặc âm không phát tag `54`
+
+`generate_qr_data(amount=0)`, số âm, và `None` đều omit tag `54` trong QR payload. Đây là behavior cố ý — chỉ `amount > 0` mới tạo amount field. Không "fix" bằng truthiness check.
+
 ### Optional rows need explicit `[hidden]` CSS
 
 Template dùng flex row. Nếu sửa CSS, giữ rule này:
@@ -271,7 +275,10 @@ print(path)
 PY
 ```
 
-Nếu lệnh render fail trên máy mới, kiểm tra `_CHROMIUM_PATH` trong [`renderer.py`](mcp-server/renderer.py) trước.
+Nếu lệnh render fail trên máy mới, kiểm tra:
+
+1. Đã chạy `playwright install chromium` chưa.
+2. Nếu dùng Chromium ngoài Playwright, đã set `CHROMIUM_PATH` chưa.
 
 ## Bank Data And Logos
 

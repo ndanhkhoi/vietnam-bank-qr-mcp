@@ -21,9 +21,10 @@
 - Renderer card data uses `bank_code` differently: pass `bank.code` there so logos resolve from `assets/bank_logos/{code}.png`.
 - MCP tool names differ from module function names: server exposes `search_bank`, `get_qr_data`, `generate_payment_card`, `get_bank_list`, `update_bank_list_tool`; module API has `search_banks`, `generate_qr_data`, and `render_card`.
 - `sanitize_content()` strips Vietnamese diacritics and keeps only `[a-zA-Z0-9 ]`; sanitize payment content before QR generation.
-- `renderer.py` launches Chromium from `_CHROMIUM_PATH = ~/chromium/chrome-linux/chrome`. If smoke rendering fails on a fresh machine, this hardcoded path is the first thing to check.
+- `renderer.py` resolves the Chromium binary from the `CHROMIUM_PATH` env var and falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` if the bundled binary is unavailable.
 - Playwright rendering is intentionally done in a subprocess because sync Playwright inside async MCP can deadlock.
 - The HTML template loads local fonts and `../node_modules/qr-code-styling/...`; keep `page.goto(file://...)`, not `set_content()`, or relative assets/fonts break.
+- `generate_qr_data(amount=...)` emits tag `54` only when `amount > 0`. `0`, negatives, and `None` all omit the tag. Do not "fix" this with a truthiness check.
 
 ## Rendering Constraints
 

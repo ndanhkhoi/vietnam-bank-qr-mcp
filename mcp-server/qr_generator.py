@@ -102,7 +102,7 @@ def generate_qr_data(
     root["53"] = NAPAS_CURRENCY
 
     # ID 54: Transaction Amount (optional)
-    if amount:
+    if amount is not None and amount > 0:
         amt = f"{amount:.0f}"
         root["54"] = amt
 

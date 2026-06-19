@@ -1,7 +1,7 @@
 ---
 name: qr-transfer
 description: "Create Vietnamese bank transfer QR codes and payment card PNGs. Use whenever the user asks for VietQR, NAPAS QR, bank transfer QR, payment QR, account-number payment cards, or QR for invoices/orders. Not for WiFi, URL, vCard, or non-bank QR codes."
-version: 15.2.0
+version: 15.3.0
 author: vietnam-bank-qr-mcp contributors
 license: MIT
 metadata:
@@ -132,6 +132,7 @@ transfer data
 Rendering constraints:
 
 - Keep Playwright in a subprocess; sync Playwright inside async MCP can deadlock.
+- Chromium binary resolves from `CHROMIUM_PATH` env var; falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` only when the bundled binary is unavailable.
 - Use `page.add_init_script()` before `page.goto()` to inject `window.__CARD_DATA__`.
 - Use `page.goto("file://...")`, not `set_content()`, so relative fonts, logos, and `node_modules` assets load.
 - Screenshot `body`, not `.card` or `.mac-window`, to preserve the 16px padding and shadow.
@@ -145,6 +146,7 @@ Rendering constraints:
 - Country tag `58` must be `VN`; currency tag `53` is `704`.
 - Payment purpose/content belongs under additional data tag `62`, subtag `08`.
 - CRC is CRC16-CCITT with polynomial `0x1021`, initial `0xFFFF`.
+- Amount tag `54` only emits when `amount > 0`. `0`, negatives, and `None` all omit the tag.
 - See `references/qr-algorithm.md` for TLV details and the spec CRC example.
 
 ## Card Design Notes
