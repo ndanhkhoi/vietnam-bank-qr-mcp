@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=900, initial-scale=1.0" />
+  <title>QR Payment Card</title>
+  <style>
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/fonts/BeVietnamPro-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/fonts/BeVietnamPro-Medium.woff2") format("woff2");
+      font-weight: 500;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/fonts/BeVietnamPro-SemiBold.woff2") format("woff2");
+      font-weight: 600;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Be Vietnam Pro";
+      src: url("../assets/fonts/BeVietnamPro-Bold.woff2") format("woff2");
+      font-weight: 700;
+      font-display: block;
+    }
+
+    :root {
+      --navy: #0a1e3f;
+      --navy-value: #142b4f;
+      --muted: #6b7d99;
+      --muted-2: #9ba8bd;
+      --muted-3: #a1adbd;
+      --line: #e8edf5;
+      --line-soft: #edf1f6;
+      --green: #15803d;
+      --green-bg: #f0fdf4;
+      --green-border: #bbf7d0;
+      --card: #ffffff;
+
+      /* macOS chrome */
+      --mac-titlebar: #e8e9ed;
+      --mac-titlebar-border: #d1d3d8;
+      --mac-title-text: #3c3c3c;
+      --mac-close: #ff5f57;
+      --mac-min: #febc2e;
+      --mac-max: #28c840;
+
+      --mac-radius: 12px;
+      --mac-shadow: 0 30px 70px rgba(0, 0, 0, 0.18), 0 12px 30px rgba(0, 0, 0, 0.08);
+      --shadow-qr: 0 10px 28px rgba(15, 23, 42, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 900px;
+      font-family: "Be Vietnam Pro", -apple-system, system-ui, sans-serif;
+      background: #ffffff;
+      color: var(--navy);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: 16px;
+    }
+
+    /* ── macOS Window ─────────────────── */
+    .mac-window {
+      width: 100%;
+      background: var(--card);
+      border-radius: var(--mac-radius);
+      box-shadow: var(--mac-shadow);
+      overflow: hidden;
+    }
+
+    .mac-titlebar {
+      display: flex;
+      align-items: center;
+      height: 38px;
+      padding: 0 14px;
+      background: var(--mac-titlebar);
+      border-bottom: 1px solid var(--mac-titlebar-border);
+      position: relative;
+    }
+    .mac-traffic {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .mac-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .mac-dot.close { background: var(--mac-close); }
+    .mac-dot.min   { background: var(--mac-min); }
+    .mac-dot.max   { background: var(--mac-max); }
+    .mac-title {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mac-title-text);
+      letter-spacing: -0.01em;
+    }
+
+    .mac-content {
+      padding: 32px 40px 24px;
+    }
+
+    /* ── Title block ─────────────────── */
+    .title-block {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--navy);
+    }
+    .subtitle {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--muted-2);
+      margin-top: 4px;
+    }
+
+    /* ── QR section ─────────────────── */
+    .qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .qr-frame {
+      width: 420px;
+      height: 420px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: var(--shadow-qr);
+      display: grid;
+      place-items: center;
+    }
+    .qr-frame canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* ── Bank section ─────────────────── */
+    .bank-section {
+      text-align: center;
+      margin-top: 4px;
+    }
+    .bank-logo {
+      display: block;
+      max-width: 220px;
+      max-height: 66px;
+      width: auto;
+      height: auto;
+      margin: 0 auto;
+      object-fit: contain;
+    }
+    .bank-name {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 7px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    /* ── Info table ─────────────────── */
+    .info {
+      margin-top: 16px;
+      padding: 0 8px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      gap: 20px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .info-label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .info-value {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--navy-value);
+      text-align: right;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      display: -webkit-box;
+      -webkit-box-direction: normal;
+      overflow: hidden;
+    }
+    .info-value.account-no {
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--navy-value);
+      letter-spacing: 0.01em;
+    }
+    .info-value.transfer-content {
+      font-weight: 600;
+      color: #475569;
+    }
+    .info-value.amount {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    /* ── Warning ─────────────────── */
+    .warning {
+      margin-top: 18px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 12px;
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+    }
+    .warning-icon {
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+    }
+    .warning-text {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--green);
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Footer ─────────────────── */
+    .footer {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted-3);
+    }
+
+    .info-row[hidden], .amount-row[hidden] { display: none !important; }
+  </style>
+</head>
+
+<body>
+  <div class="mac-window">
+    <!-- Title bar -->
+    <div class="mac-titlebar">
+      <div class="mac-traffic">
+        <span class="mac-dot close"></span>
+        <span class="mac-dot min"></span>
+        <span class="mac-dot max"></span>
+      </div>
+      <span class="mac-title">Chuyển khoản — Napas QR</span>
+    </div>
+
+    <!-- Content -->
+    <div class="mac-content">
+      <div class="title-block">
+        <div class="title">Quét mã để chuyển khoản</div>
+        <div class="subtitle">Scan QR bằng ứng dụng ngân hàng</div>
+      </div>
+
+      <div class="qr-section">
+        <div class="qr-frame">
+          <div id="qr-canvas"></div>
+        </div>
+        <div class="bank-section">
+          <img class="bank-logo" id="bank-logo" alt="" />
+          <div class="bank-name" id="bank-name"></div>
+        </div>
+      </div>
+
+      <div class="info">
+        <div class="info-row" id="account-name-row">
+          <span class="info-label">Chủ tài khoản</span>
+          <span class="info-value" id="account-name"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Số tài khoản</span>
+          <span class="info-value account-no" id="account-no"></span>
+        </div>
+        <div class="info-row" id="transfer-content-row">
+          <span class="info-label">Nội dung</span>
+          <span class="info-value transfer-content" id="transfer-content"></span>
+        </div>
+        <div class="info-row amount-row" id="amount-row">
+          <span class="info-label">Số tiền</span>
+          <span class="info-value amount" id="amount"></span>
+        </div>
+      </div>
+
+      <div class="warning">
+        <svg class="warning-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" fill="#15803d"/>
+          <path d="M8 12.5l2.5 2.5L16 9.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="warning-text">Vui lòng kiểm tra đúng tên tài khoản, số tài khoản và ngân hàng trước khi chuyển.</span>
+      </div>
+
+      <div class="footer">Generated by khoinda</div>
+    </div>
+  </div>
+
+  <script src="../node_modules/qr-code-styling/lib/qr-code-styling.js"></script>
+  <script>
+    const params = window.__CARD_DATA__ || {};
+
+    if (params.bank_logo_base64) {
+      document.getElementById('bank-logo').src = 'data:image/png;base64,' + params.bank_logo_base64;
+    } else {
+      document.getElementById('bank-logo').style.display = 'none';
+    }
+    document.getElementById('bank-name').textContent = params.bank_name || '';
+    document.getElementById('account-no').textContent = params.account_no || '';
+
+    // Optional rows — ẩn nếu rỗng
+    const accountName = params.account_name || '';
+    if (accountName) {
+      document.getElementById('account-name').textContent = accountName;
+    } else {
+      document.getElementById('account-name-row').hidden = true;
+    }
+
+    const transferContent = params.payment_content || '';
+    if (transferContent) {
+      document.getElementById('transfer-content').textContent = transferContent;
+    } else {
+      document.getElementById('transfer-content-row').hidden = true;
+    }
+
+    if (params.amount) {
+      document.getElementById('amount').textContent = params.amount;
+    } else {
+      document.getElementById('amount-row').hidden = true;
+    }
+
+    // Styled QR — premium subtle
+    const qrCode = new QRCodeStyling({
+      width: 388,
+      height: 388,
+      type: 'canvas',
+      data: params.qr_data || 'placeholder',
+      margin: 10,
+      dotsOptions: {
+        type: 'dots',
+        gradient: {
+          type: 'linear',
+          rotation: Math.PI / 6,
+          colorStops: [
+            { offset: 0, color: '#1a3a6b' },
+            { offset: 0.5, color: '#142b4f' },
+            { offset: 1, color: '#0a1e3f' },
+          ],
+        },
+      },
+      backgroundOptions: { color: '#ffffff' },
+      cornersSquareOptions: {
+        type: 'extra-rounded',
+        gradient: {
+          type: 'linear',
+          rotation: 0,
+          colorStops: [
+            { offset: 0, color: '#16a34a' },
+            { offset: 1, color: '#15803d' },
+          ],
+        },
+      },
+      cornersDotOptions: {
+        type: 'dot',
+        color: '#15803d',
+      },
+      image: params.bank_logo_base64 ? 'data:image/png;base64,' + params.bank_logo_base64 : '',
+      imageOptions: {
+        crossOrigin: 'anonymous',
+        margin: 4,
+        imageSize: 0.22,
+        hideBackgroundDots: true,
+      },
+    });
+    qrCode.append(document.getElementById('qr-canvas'));
+  </script>
+</body>
+</html>

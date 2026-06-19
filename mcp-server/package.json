@@ -1,0 +1,10 @@
+{
+  "name": "napas-qr-mcp-python",
+  "version": "1.0.0",
+  "description": "Napas QR IBFTTA generator — EMVCo compliant QR + styled payment card PNG",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "qr-code-styling": "^1.9.2"
+  }
+}
