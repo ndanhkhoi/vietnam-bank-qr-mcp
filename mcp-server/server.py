@@ -3,19 +3,26 @@
 from __future__ import annotations
 
 import json
+import logging
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
+from mcp.server.fastmcp.exceptions import ToolError
 
 from banks import Bank, get_bank_by_bin, load_banks, search_banks, update_bank_list
 from qr_generator import generate_payment_card as _gen_card, generate_qr_data, sanitize_content
 
+logger = logging.getLogger("napas-qr")
 mcp = FastMCP("napas-qr")
 
 
 # ── Helpers ──────────────────────────────────────────────
 
-def _error_response(bin_code: str) -> str:
-    return json.dumps({"error": f"Bank not found: {bin_code}"})
+def _require_bank(bank_bin: str) -> Bank:
+    """Resolve bank by BIN or raise ToolError (sets isError: true)."""
+    bank = get_bank_by_bin(bank_bin)
+    if bank is None:
+        raise ToolError(f"Bank not found: {bank_bin}")
+    return bank
 
 
 def _bank_summary(bank: Bank) -> dict:
@@ -24,60 +31,58 @@ def _bank_summary(bank: Bank) -> dict:
 
 # ── QR Tools ─────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def generate_payment_card(
-    bank_code: str,
+    bank_bin: str,
     account_no: str,
-    account_holder: str = "",
+    account_name: str = "",
     amount: float | None = None,
     order_id: str | None = None,
     payment_content: str | None = None,
-) -> str:
+) -> list[str | Image]:
     """Generate payment card PNG via HTML + Playwright.
 
     Professional card design with QR, bank logo, transfer info.
     Rendered via Playwright at 900x1200 viewport, 2x retina.
 
     Args:
-        bank_code: Bank BIN
+        bank_bin: Bank BIN (6 digits, e.g. 970423)
         account_no: Recipient account number
-        account_holder: Account holder name
+        account_name: Account holder name
         amount: VND amount (omit for 'Tuỳ chọn')
         order_id: Tracking ID
         payment_content: Description
     """
-    bank = get_bank_by_bin(bank_code)
-    if bank is None:
-        return _error_response(bank_code)
+    bank = _require_bank(bank_bin)
 
     content = sanitize_content(payment_content)
-    holder = sanitize_content(account_holder) or ""
-    qr_data = generate_qr_data(bank_code, account_no, amount, order_id, content)
-    image_base64 = _gen_card(
+    name = sanitize_content(account_name) or ""
+    qr_data = generate_qr_data(bank_bin, account_no, amount, order_id, content)
+    png_bytes = _gen_card(
         qr_data=qr_data,
         bank_name=bank.name,
-        bank_bin=bank.bin,
         bank_code=bank.code,
         account_no=account_no,
-        account_holder=holder,
+        account_name=name,
         amount=amount,
         payment_content=content,
     )
 
-    return json.dumps({
+    summary = json.dumps({
         "bank": bank.short_name,
-        "bank_code": bank.bin,
+        "bank_bin": bank.bin,
         "account_no": account_no,
+        "account_name": name or "",
         "amount": amount or "user-entered",
         "payment_content": content or "",
         "qr_data": qr_data,
-        "image_base64": f"data:image/png;base64,{image_base64}",
     }, ensure_ascii=False)
+    return [summary, Image(data=png_bytes, format="png")]
 
 
 @mcp.tool()
 def get_qr_data(
-    bank_code: str,
+    bank_bin: str,
     account_no: str,
     amount: float | None = None,
     order_id: str | None = None,
@@ -86,21 +91,19 @@ def get_qr_data(
     """Generate QR data string only (no image). For custom rendering.
 
     Args:
-        bank_code: Bank BIN
+        bank_bin: Bank BIN (6 digits, e.g. 970423)
         account_no: Recipient account number
         amount: VND amount
         order_id: Tracking ID
         payment_content: Description
     """
-    bank = get_bank_by_bin(bank_code)
-    if bank is None:
-        return _error_response(bank_code)
+    bank = _require_bank(bank_bin)
 
     content = sanitize_content(payment_content)
-    qr_data = generate_qr_data(bank_code, account_no, amount, order_id, content)
+    qr_data = generate_qr_data(bank_bin, account_no, amount, order_id, content)
     return json.dumps({
         "bank": bank.short_name,
-        "bank_code": bank.bin,
+        "bank_bin": bank.bin,
         "account_no": account_no,
         "amount": amount or "user-entered",
         "payment_content": content or "",
@@ -129,7 +132,11 @@ def search_bank(query: str) -> str:
 @mcp.tool()
 def update_bank_list_tool() -> str:
     """Refresh bank list from VietQR API. Also downloads all bank logos to cache."""
-    banks = update_bank_list()
+    try:
+        banks = update_bank_list()
+    except Exception as e:
+        logger.exception("update_bank_list failed")
+        raise ToolError(f"Failed to refresh bank list: {e}")
     return json.dumps({
         "message": f"Updated {len(banks)} banks",
         "banks": [_bank_summary(b) for b in banks],

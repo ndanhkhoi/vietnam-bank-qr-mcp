@@ -88,11 +88,13 @@ Server dùng stdio transport. Ví dụ cấu hình MCP client:
 
 | Tool | Mục đích |
 |---|---|
-| `generate_payment_card(bank_code, account_no, account_holder?, amount?, order_id?, payment_content?)` | Sinh QR payload và render PNG card dạng base64 data URL. `bank_code` phải là BIN 6 số. |
-| `get_qr_data(bank_code, account_no, amount?, order_id?, payment_content?)` | Chỉ sinh QR payload EMVCo, không render ảnh. `bank_code` phải là BIN 6 số. |
-| `search_bank(query)` | Tìm ngân hàng theo tên, short name, code hoặc BIN. |
-| `get_bank_list()` | Liệt kê toàn bộ ngân hàng trong [`banks.json`](mcp-server/banks.json). |
+| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Sinh QR payload và render PNG card. Trả `[JSON summary, Image]` (PNG raw bytes trong Image content block). `bank_bin` là BIN 6 số. |
+| `get_qr_data(bank_bin, account_no, amount?, order_id?, payment_content?)` | Chỉ sinh QR payload EMVCo, không render ảnh. Trả JSON string. `bank_bin` là BIN 6 số. |
+| `search_bank(query)` | Tìm ngân hàng theo tên, short name, code hoặc BIN. Trả JSON string. |
+| `get_bank_list()` | Liệt kê toàn bộ ngân hàng trong [`banks.json`](mcp-server/banks.json). Trả JSON string. |
 | `update_bank_list_tool()` | Refresh danh sách ngân hàng từ VietQR API và tải logo. Có network write. |
+
+Bank not found hoặc lỗi API sẽ raise `ToolError` → MCP client nhận `isError: true` (không trả JSON error string).
 
 ## Python API
 
@@ -100,29 +102,42 @@ Ví dụ này chạy từ [`mcp-server/`](mcp-server/):
 
 ```python
 from banks import search_banks
-from qr_generator import generate_qr_data, sanitize_content
+from qr_generator import generate_qr_data, generate_payment_card, sanitize_content
 from renderer import render_card
 
 bank = search_banks("TPBank")[0]
 
 # Quan trọng: QR payload dùng bank.bin, không dùng bank.code.
 qr_data = generate_qr_data(
-    bank_code=bank.bin,
+    bank_bin=bank.bin,
     account_no="0123456789",
     amount=1000000,
     payment_content=sanitize_content("TEST TRANSFER"),
 )
 
+# Cách 1: dùng generate_payment_card() — trả PNG bytes sẵn dùng.
+png_bytes = generate_payment_card(
+    qr_data=qr_data,
+    bank_name=bank.name,
+    bank_code=bank.code,           # short code cho logo.
+    account_no="0123456789",
+    account_name="NGUYEN VAN A",
+    amount=1000000,
+    payment_content="TEST TRANSFER",
+)
+with open("./qr_card.png", "wb") as f:
+    f.write(png_bytes)
+
+# Cách 2: render_card() thủ công nếu cần kiểm soát card_data và output path.
 card_data = {
     "qr_data": qr_data,
-    "bank_code": bank.code,      # Renderer dùng code ngắn để tìm logo.
+    "bank_code": bank.code,         # Renderer dùng code ngắn để tìm logo.
     "bank_name": bank.name,
     "account_name": "NGUYEN VAN A",
     "account_no": "0123456789",
     "payment_content": "TEST TRANSFER",
-    "amount": "1.000.000 VND",  # String đã format cho card.
+    "amount": "1.000.000 VND",     # String đã format cho card.
 }
-
 path = render_card(card_data, output_path="./qr_card.png")
 print(path)
 ```
@@ -147,34 +162,29 @@ PY
 ```text
 Bank/account/amount/content
 -> generate_qr_data(): tạo payload EMVCo/NAPAS raw + CRC16
--> renderer.py inject window.__CARD_DATA__ trước page.goto()
+-> renderer.py ghi card_data ra JSON config file (không string interpolation)
+-> subprocess (sys.executable) khởi Playwright, đọc config, inject window.__CARD_DATA__
 -> payment-card.html load font local và qr-code-styling.js
 -> browser render styled QR canvas
 -> Playwright chụp screenshot body ở scale 2x
--> trả về PNG path hoặc base64
+-> trả về PNG path; generate_payment_card() đọc thành bytes
 ```
 
-Playwright được chạy trong subprocess có chủ ý. Không đưa sync Playwright trực tiếp vào async MCP handler vì có thể deadlock.
+Playwright được chạy trong subprocess có chủ ý (dùng `sys.executable` để kế thừa Python interpreter đang chạy). Không đưa sync Playwright trực tiếp vào async MCP handler vì có thể deadlock. Subprocess nhận input qua JSON config file thay vì string interpolation để tránh bug escape.
 
 ## Common Pitfalls
 
-### `bank_code` trong QR payload là BIN, không phải code ngắn
+### `bank_bin` (BIN) vs `bank_code` (short code)
 
-Trong `generate_qr_data()` và các MCP tool, tham số `bank_code` phải là BIN 6 số như `970423`.
-
-Sai:
+`generate_qr_data()` và MCP tool nhận `bank_bin` — BIN 6 số như `970423`. Renderer cần `bank_code` (short code như `TPB`) trong `card_data` để đọc logo từ [`assets/bank_logos/{code}.png`](mcp-server/assets/bank_logos/).
 
 ```python
-generate_qr_data(bank_code=bank.code, ...)
+# QR payload — dùng BIN
+qr_data = generate_qr_data(bank_bin=bank.bin, ...)
+
+# Card data — dùng short code cho logo
+card_data = {"bank_code": bank.code, ...}
 ```
-
-Đúng:
-
-```python
-generate_qr_data(bank_code=bank.bin, ...)
-```
-
-Ngược lại, renderer cần `bank.code` trong `card_data["bank_code"]` để đọc logo từ [`assets/bank_logos/{code}.png`](mcp-server/assets/bank_logos/).
 
 ### MCP tool names differ from Python functions
 

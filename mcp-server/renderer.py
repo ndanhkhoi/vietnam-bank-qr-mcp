@@ -5,12 +5,17 @@ import base64
 import json
 import os
 import subprocess
+import sys
 import tempfile
 
 
-_CHROMIUM_PATH = os.environ.get("CHROMIUM_PATH") or None
 _TEMPLATE = os.path.join(os.path.dirname(__file__), "templates", "payment-card.html")
 _LOGO_CACHE = os.path.join(os.path.dirname(__file__), "assets", "bank_logos")
+
+
+def _get_chromium_path() -> str | None:
+    """Resolve Chromium path from env at call time."""
+    return os.environ.get("CHROMIUM_PATH") or None
 
 
 def _get_bank_logo_b64(bank_code: str) -> str:
@@ -53,34 +58,42 @@ def render_card(data: dict, output_path: str | None = None) -> str:
 
     # Build Playwright script — use file:// to load template with relative font paths
     template_url = "file://" + _TEMPLATE
+    chromium_path = _get_chromium_path()
 
-    script_content = """import json
+    config = {
+        "template_url": template_url,
+        "output_path": output_path,
+        "chromium_path": chromium_path,
+        "inject_js": inject_js,
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, dir="/tmp") as cf:
+        json.dump(config, cf)
+        config_path = cf.name
+
+    script_content = """import json, sys
 from playwright.sync_api import sync_playwright
 
-TEMPLATE_URL = """ + json.dumps(template_url) + """
-OUTPUT_PATH = """ + json.dumps(output_path) + """
-CHROMIUM_PATH = """ + json.dumps(_CHROMIUM_PATH) + """
-INJECT_JS = """ + json.dumps(inject_js) + """
+with open(sys.argv[1]) as f:
+    cfg = json.load(f)
 
 with sync_playwright() as p:
     browser = p.chromium.launch(
         headless=True,
-        **({"executable_path": CHROMIUM_PATH} if CHROMIUM_PATH else {}),
+        **({"executable_path": cfg["chromium_path"]} if cfg["chromium_path"] else {}),
         args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
     )
     page = browser.new_page(
         viewport={"width": 900, "height": 1200},
         device_scale_factor=2,
     )
-    page.add_init_script(INJECT_JS)
-    page.goto(TEMPLATE_URL, wait_until="networkidle")
+    page.add_init_script(cfg["inject_js"])
+    page.goto(cfg["template_url"], wait_until="networkidle")
     page.wait_for_timeout(500)
 
-    # Wait for fonts
     page.evaluate("async () => { await document.fonts.ready; }")
 
-    # Wait for images
-    page.evaluate(""" + "\"\"\"" + """() => {
+    page.evaluate('''() => {
         const imgs = document.querySelectorAll('img');
         return Promise.all(Array.from(imgs).map(img => {
             if (img.complete) return Promise.resolve();
@@ -89,16 +102,13 @@ with sync_playwright() as p:
                 img.onerror = resolve;
             });
         }));
-    }""" + "\"\"\"" + """)
+    }''')
 
     page.wait_for_timeout(500)
-
-    # Wait for QR canvas to render
     page.wait_for_function("() => document.querySelector('#qr-canvas canvas') !== null", timeout=5000)
     page.wait_for_timeout(300)
 
-    card = page.locator("body")
-    card.screenshot(path=OUTPUT_PATH, type="png")
+    page.locator("body").screenshot(path=cfg["output_path"], type="png")
     browser.close()
 """
 
@@ -108,7 +118,7 @@ with sync_playwright() as p:
 
     try:
         result = subprocess.run(
-            ["python3", script_path],
+            [sys.executable, script_path, config_path],
             capture_output=True,
             text=True,
             timeout=45,
@@ -119,13 +129,20 @@ with sync_playwright() as p:
     except subprocess.TimeoutExpired:
         raise RuntimeError("Renderer timed out after 45s")
     finally:
-        try:
-            os.unlink(script_path)
-        except OSError:
-            pass
+        for p in (script_path, config_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 def image_to_base64(path: str) -> str:
     """Read PNG file and return base64 string."""
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
+
+
+def read_image_bytes(path: str) -> bytes:
+    """Read PNG file and return raw bytes."""
+    with open(path, "rb") as f:
+        return f.read()

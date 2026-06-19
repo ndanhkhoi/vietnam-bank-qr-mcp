@@ -17,12 +17,13 @@
 
 ## Runtime Gotchas
 
-- `generate_qr_data(bank_code=...)` expects the bank BIN (`bank.bin`, 6 digits such as `970423`), not the short code (`bank.code`, such as `TPB`). Passing `bank.code` can render a QR that scans invalid.
-- Renderer card data uses `bank_code` differently: pass `bank.code` there so logos resolve from `assets/bank_logos/{code}.png`.
+- `generate_qr_data(bank_bin=...)` expects the bank BIN (`bank.bin`, 6 digits such as `970423`).
+- Renderer card data uses `bank_code` (the short code such as `TPB`) so logos resolve from `assets/bank_logos/{code}.png`.
 - MCP tool names differ from module function names: server exposes `search_bank`, `get_qr_data`, `generate_payment_card`, `get_bank_list`, `update_bank_list_tool`; module API has `search_banks`, `generate_qr_data`, and `render_card`.
 - `sanitize_content()` strips Vietnamese diacritics and keeps only `[a-zA-Z0-9 ]`; sanitize payment content before QR generation.
-- `renderer.py` resolves the Chromium binary from the `CHROMIUM_PATH` env var and falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` if the bundled binary is unavailable.
-- Playwright rendering is intentionally done in a subprocess because sync Playwright inside async MCP can deadlock.
+- `renderer.py` resolves the Chromium binary from the `CHROMIUM_PATH` env var (read at call time) and falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` if the bundled binary is unavailable.
+- Playwright rendering is intentionally done in a subprocess (spawned via `sys.executable` so it inherits the same Python interpreter) because sync Playwright inside async MCP can deadlock.
+- The subprocess receives its inputs via a JSON config file (not string interpolation), so values flow safely through `json.load`.
 - The HTML template loads local fonts and `../node_modules/qr-code-styling/...`; keep `page.goto(file://...)`, not `set_content()`, or relative assets/fonts break.
 - `generate_qr_data(amount=...)` emits tag `54` only when `amount > 0`. `0`, negatives, and `None` all omit the tag. Do not "fix" this with a truthiness check.
 
@@ -34,11 +35,19 @@
 - Optional rows are hidden in template JS; keep `.info-row[hidden], .amount-row[hidden] { display: none !important; }` because flex display overrides browser hidden behavior.
 - Avoid sibling/last-child border tricks on `.info-row`; hidden middle rows can leave orphan lines. Each row currently owns its bottom border.
 
+## MCP Tool Contract
+
+- `generate_payment_card` returns `list[str | Image]` — a JSON summary string plus an `Image` content block (raw PNG bytes). Declared with `structured_output=False` because pydantic cannot schema `Image`.
+- `get_qr_data`, `search_bank`, `get_bank_list`, `update_bank_list_tool` return JSON-serialized strings.
+- Bank not found raises `ToolError` via `_require_bank()` → MCP sets `isError: true` in the response. Do not return error JSON strings.
+- `update_bank_list_tool` catches exceptions from the VietQR API and re-raises as `ToolError` so network failures don't crash the MCP session.
+
 ## QR Spec Constraints
 
 - NAPAS QR uses root tag `38`, not tag `26`.
 - Tag `38` nests AID `A000000727`, payment network fields `00` = BIN and `01` = account number, and service `QRIBFTTA`.
 - Country tag `58` must be `VN`; currency tag `53` is `704`; purpose/content belongs under additional data tag `62` subtag `08`.
+- `generate_qr_data(amount=...)` emits tag `54` only when `amount > 0`. `0`, negatives, and `None` all omit the tag. Do not "fix" this with a truthiness check.
 - CRC is CRC16-CCITT with polynomial `0x1021`, initial `0xFFFF`, implemented in `calculate_crc16()`.
 
 ## Verification Shortcuts

@@ -1,7 +1,7 @@
 ---
 name: qr-transfer
 description: "Create Vietnamese bank transfer QR codes and payment card PNGs. Use whenever the user asks for VietQR, NAPAS QR, bank transfer QR, payment QR, account-number payment cards, or QR for invoices/orders. Not for WiFi, URL, vCard, or non-bank QR codes."
-version: 15.3.0
+version: 15.5.0
 author: vietnam-bank-qr-mcp contributors
 license: MIT
 metadata:
@@ -35,7 +35,7 @@ Use these only when the user asks for a QR but does not provide recipient accoun
 ## Workflow
 
 1. Resolve the bank: use `search_banks(query)[0]` when the user gives a bank name or short code.
-2. Generate QR data: call `generate_qr_data(bank_code=bank.bin, ...)`. The QR payload must use the 6-digit BIN, not `bank.code`.
+2. Generate QR data: call `generate_qr_data(bank_bin=bank.bin, ...)`. The QR payload must use the 6-digit BIN.
 3. Render the card: call `render_card(data_dict, output_path=...)`. The renderer data must use `data_dict["bank_code"] = bank.code` so the logo resolves.
 4. Return the generated PNG path, or attach it as media when the host supports media outputs.
 
@@ -43,9 +43,9 @@ Use these only when the user asks for a QR but does not provide recipient accoun
 
 | Parameter | Required | Notes |
 |---|---:|---|
-| `bank_code` | Yes | Accept a 6-digit BIN such as `970423`, or resolve a name/code such as `TPBank` via `search_banks()` first. |
+| `bank_bin` | Yes | Accept a 6-digit BIN such as `970423`, or resolve a name/code such as `TPBank` via `search_banks()` first. |
 | `account_no` | Yes | Recipient account number. |
-| `account_holder` | No | Account holder name. Sanitized for QR/card use. |
+| `account_name` | No | Account holder name. Sanitized for QR/card use. |
 | `amount` | No | VND amount. Omit for user-entered amount. |
 | `payment_content` | No | Transfer description. Sanitize before QR generation; only `[a-zA-Z0-9 ]` remains. |
 | `order_id` | No | Bill/order reference. |
@@ -56,11 +56,13 @@ Server entrypoint: `mcp-server/server.py`.
 
 | Tool | Use |
 |---|---|
-| `generate_payment_card(bank_code, account_no, account_holder?, amount?, order_id?, payment_content?)` | Generate QR data plus PNG card. `bank_code` is the 6-digit BIN. |
-| `get_qr_data(bank_code, account_no, amount?, order_id?, payment_content?)` | Generate QR data string only, without an image. `bank_code` is the 6-digit BIN. |
-| `search_bank(query)` | Search banks by name, short code, short name, or BIN. Returns JSON. |
-| `get_bank_list()` | List supported banks. |
+| `generate_payment_card(bank_bin, account_no, account_name?, amount?, order_id?, payment_content?)` | Generate QR data plus PNG card. Returns `[JSON summary, Image]` (raw PNG bytes in Image content block). `bank_bin` is the 6-digit BIN. |
+| `get_qr_data(bank_bin, account_no, amount?, order_id?, payment_content?)` | Generate QR data string only, without an image. Returns JSON string. `bank_bin` is the 6-digit BIN. |
+| `search_bank(query)` | Search banks by name, short code, short name, or BIN. Returns JSON string. |
+| `get_bank_list()` | List supported banks. Returns JSON string. |
 | `update_bank_list_tool()` | Refresh banks and logos from VietQR; network mutation. |
+
+Bank not found or API failures raise `ToolError` → MCP client receives `isError: true`. No error JSON strings are returned.
 
 MCP tool names are not the same as Python module function names. For direct Python scripts, use the module API below.
 
@@ -76,7 +78,7 @@ from renderer import render_card
 bank = search_banks("TPBank")[0]
 
 qr_data = generate_qr_data(
-    bank_code=bank.bin,  # 6-digit BIN; do not use bank.code here.
+    bank_bin=bank.bin,  # 6-digit BIN
     account_no="0123456789",
     amount=10000000,
     payment_content=sanitize_content("DONATE DEMO"),
@@ -111,9 +113,10 @@ PY
 
 ## API Pitfalls
 
-- `generate_qr_data(bank_code=...)` is misnamed: pass `bank.bin`, not `bank.code`.
-- `render_card(data)` returns a PNG path, not base64.
-- `qr_generator.generate_payment_card()` returns base64 and wraps `render_card()`.
+- `generate_qr_data(bank_bin=...)` takes the 6-digit BIN; the renderer's `bank_code` dict key takes the short code for logo lookup.
+- `render_card(data)` returns a PNG path, not bytes.
+- `qr_generator.generate_payment_card()` returns raw PNG bytes and wraps `render_card()`.
+- MCP `generate_payment_card` tool returns `list[str | Image]` (JSON summary + Image content block), not a base64 JSON string.
 - `search_banks()` is plural and returns a list; MCP `search_bank()` is singular and returns JSON.
 - Card `amount` is a preformatted string such as `"10.000.000 VND"`, not a number.
 
@@ -122,17 +125,19 @@ PY
 ```text
 transfer data
 -> generate raw EMVCo QR string with CRC16
--> inject raw qr_data into the HTML template
+-> renderer writes card_data to a JSON config file
+-> subprocess (sys.executable) loads config, injects window.__CARD_DATA__
 -> template loads qr-code-styling.js
 -> browser renders styled QR canvas
 -> Playwright subprocess screenshots body at 2x scale
--> PNG path or base64 is returned
+-> PNG path returned; generate_payment_card() reads it as bytes
 ```
 
 Rendering constraints:
 
-- Keep Playwright in a subprocess; sync Playwright inside async MCP can deadlock.
-- Chromium binary resolves from `CHROMIUM_PATH` env var; falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` only when the bundled binary is unavailable.
+- Keep Playwright in a subprocess (spawned via `sys.executable`); sync Playwright inside async MCP can deadlock.
+- The subprocess receives inputs via a JSON config file, not string interpolation — values flow safely through `json.load`.
+- Chromium binary resolves from `CHROMIUM_PATH` env var (read at call time); falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` only when the bundled binary is unavailable.
 - Use `page.add_init_script()` before `page.goto()` to inject `window.__CARD_DATA__`.
 - Use `page.goto("file://...")`, not `set_content()`, so relative fonts, logos, and `node_modules` assets load.
 - Screenshot `body`, not `.card` or `.mac-window`, to preserve the 16px padding and shadow.

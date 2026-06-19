@@ -55,7 +55,7 @@ Do not use `.info-row:last-child { border-bottom: none }` or adjacent sibling bo
 
 | Row | Required | Hidden when |
 |---|---:|---|
-| Account holder | No | `account_holder` is empty. |
+| Account holder | No | `account_name` is empty. |
 | Account number | Yes | Never. |
 | Transfer content | No | `payment_content` is empty. |
 | Amount | No | `amount` is empty. |

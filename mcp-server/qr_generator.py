@@ -51,7 +51,7 @@ def _build_tlv_map(data: dict[str, str]) -> str:
 # ── QR data generation ───────────────────────────────────
 
 def generate_qr_data(
-    bank_code: str,
+    bank_bin: str,
     account_no: str,
     amount: float | None = None,
     order_id: str | None = None,
@@ -65,7 +65,7 @@ def generate_qr_data(
       38 = Merchant Account Information (Napas)
          00 = AID (A000000727)
          01 = Payment Network Specific (nested)
-            00 = bankCode (BIN)
+            00 = bankBin (BIN)
             01 = accountNo
          02 = Service (QRIBFTTA)
       52 = Merchant Category Code (5812)
@@ -85,7 +85,7 @@ def generate_qr_data(
 
     # ID 38: Merchant Account Information (Napas)
     payment_network = _build_tlv_map({
-        "00": bank_code,
+        "00": bank_bin,
         "01": account_no,
     })
     merchant_account = _build_tlv_map({
@@ -154,14 +154,13 @@ def sanitize_content(text: str | None) -> str | None:
 def generate_payment_card(
     qr_data: str,
     bank_name: str,
-    bank_bin: str,
     bank_code: str,
     account_no: str,
-    account_holder: str = "",
+    account_name: str = "",
     amount: float | None = None,
     payment_content: str | None = None,
-) -> str:
-    """Generate payment card PNG via HTML + Playwright. Returns base64."""
+) -> bytes:
+    """Generate payment card PNG via HTML + Playwright. Returns PNG bytes."""
 
     if amount:
         amount_str = f"{amount:,.0f} VNĐ".replace(",", ".")
@@ -172,13 +171,13 @@ def generate_payment_card(
         "qr_data": qr_data,
         "bank_code": bank_code,
         "bank_name": bank_name,
-        "account_name": account_holder,
+        "account_name": account_name,
         "account_no": account_no,
         "payment_content": payment_content or "",
         "amount": amount_str,
     }
 
-    from renderer import image_to_base64, render_card
+    from renderer import read_image_bytes, render_card
 
     png_path = render_card(card_data)
-    return image_to_base64(png_path)
+    return read_image_bytes(png_path)
