@@ -30,7 +30,7 @@
 ## Rendering Constraints
 
 - `renderer.py` injects `window.__CARD_DATA__` with `page.add_init_script()` before `page.goto()`; injecting after navigation races the template script.
-- The screenshot target is `body`, not `.card` or `.mac-window`, to preserve the 16px padding and shadow.
+- The screenshot target is `body`, not `.pay-card`, to preserve the 16px padding and shadow.
 - The template waits for local fonts, images, and `#qr-canvas canvas`; keep these waits when editing rendering.
 - Optional rows are hidden in template JS; keep `.info-row[hidden], .amount-row[hidden] { display: none !important; }` because flex display overrides browser hidden behavior.
 - Avoid sibling/last-child border tricks on `.info-row`; hidden middle rows can leave orphan lines. Each row currently owns its bottom border.

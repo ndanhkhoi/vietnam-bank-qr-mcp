@@ -43,12 +43,21 @@ def render_card(data: dict, output_path: str | None = None) -> str:
     # Amount
     amount = data.get("amount", "")
 
+    # Amount (format as VND if numeric)
+    amount_raw = data.get("amount", "")
+    if isinstance(amount_raw, (int, float)) and amount_raw > 0:
+        amount = f"{int(amount_raw):,}".replace(",", ".")
+    else:
+        amount = amount_raw
+
     # Build inject JS — set window.__CARD_DATA__ for template script
     inject_js = (
         "window.__CARD_DATA__ = {"
         + f"qr_data: {json.dumps(data.get('qr_data', ''))},"
         + f"bank_logo_base64: {json.dumps(logo_b64)},"
         + f"bank_name: {json.dumps(data.get('bank_name', ''))},"
+        + f"bank_full_name: {json.dumps(data.get('bank_full_name', ''))},"
+        + f"bank_short_name: {json.dumps(data.get('bank_short_name', ''))},"
         + f"account_name: {json.dumps(data.get('account_name', ''))},"
         + f"account_no: {json.dumps(data.get('account_no', ''))},"
         + f"payment_content: {json.dumps(data.get('payment_content', ''))},"
@@ -84,7 +93,7 @@ with sync_playwright() as p:
         args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
     )
     page = browser.new_page(
-        viewport={"width": 900, "height": 1200},
+        viewport={"width": 560, "height": 900},
         device_scale_factor=2,
     )
     page.add_init_script(cfg["inject_js"])

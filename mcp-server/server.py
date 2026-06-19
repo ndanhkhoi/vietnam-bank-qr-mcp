@@ -67,6 +67,8 @@ def generate_payment_card(
         account_name=name,
         amount=amount,
         payment_content=content,
+        bank_short_name=bank.short_name,
+        bank_full_name=bank.name,
     )
 
     return json.dumps({

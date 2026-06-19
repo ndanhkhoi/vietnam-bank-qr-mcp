@@ -6,80 +6,111 @@ This reference explains the current design, but numeric values can drift. Verify
 
 ## Design Summary
 
-The card uses a macOS-style window shell: title bar, three traffic-light dots, centered title, and a content area containing the QR code, bank logo/name, transfer rows, warning, and footer.
-
-The title text in the actual UI is Vietnamese: `Chuyen khoan - Napas QR` conceptually maps to the displayed localized title in the template.
+The card is a single flat white rounded card (`480px` wide) centered on a cream `#ECE5D2` body. There is no OS window chrome. The card contains: a header row (bank logo + bank short name + full name subtitle + a green "NAPAS QR" badge), a centered title, a centered QR frame with the bank logo overlaid in the middle, an info table with dashed dividers, an optional amount box with a warm gradient background, a warning block, and a footer line.
 
 ## Key Layout Values
 
-- Window radius: `12px`.
-- Body padding: `16px`; this is required because the renderer screenshots `body` and needs room for the shadow/radius.
-- Content padding: `32px 40px 24px`.
-- QR frame: `420px` square, white, `1px` border, `20px` radius, `16px` padding.
-- QR canvas: `388px` square with `10px` QR margin.
-- Bank logo: max `220px` wide and `66px` high.
+- Body width: `560px`; background `#ECE5D2`; padding `16px`. The renderer screenshots `body` at 2x, so this padding preserves the card shadow and radius.
+- Card width: `480px`, centered via `margin: 0 auto`; radius `20px`.
+- Card top padding: `20px 24px 16px`.
+- Title padding: `18px 24px 12px`.
+- QR frame: `248px` square, white, `1px` border, `14px` radius, `14px` padding.
+- QR canvas (qr-code-styling): `220px` square with `6px` QR margin.
+- Header bank logo box: `56px` square, `12px` radius.
+- Info padding: `2px 24px 4px`.
+- Amount box margin/padding: `12px 24px 0` outer, `14px 18px` inner, `12px` radius.
+- Warning margin/padding: `14px 24px 0` outer, `10px 12px` inner, `8px` radius.
+- Footer padding: `12px 24px`, top border.
 
 ## Typography
 
-Local Be Vietnam Pro fonts are used from `mcp-server/assets/fonts/`. Keep weights to available files: `400`, `500`, `600`, and `700`.
+Local fonts from `mcp-server/assets/fonts/`:
 
-| Element | Size | Weight | Color |
-|---|---:|---:|---|
-| Window title | `13px` | `600` | `#3c3c3c` |
-| Card title | `28px` | `600` | `#0a1e3f` |
-| Subtitle | `15px` | `400` | `#9ba8bd` |
-| Info label | `15px` | `500` | `#6b7d99` |
-| Info value | `19px` | `600` | `#142b4f` |
-| Account number | `21px` | `700` | `#142b4f` |
-| Transfer content | `19px` | `600` | `#475569` |
-| Amount | `26px` | `700` | `#15803d` |
-| Warning text | `13px` | `400` | `#15803d` |
-| Footer | `13px` | `400` | `#a1adbd` |
+- `Be Vietnam Pro` — UI text. Weights: `400`, `500`, `600`, `700` (separate woff2 files).
+- `Fraunces` — display (titles, amount). Variable font (`Fraunces-Variable.woff2`) for weights `100–900`, plus `Fraunces-Italic.woff2` for italic brand mark only.
+- `JetBrains Mono` — account number, NAPAS badge, footer timestamp. Variable font (`JetBrainsMono-Variable.woff2`) for weights `100–800`.
+
+| Element | Family | Size | Weight | Color |
+|---|---|---:|---:|---|
+| Bank short name | Be Vietnam Pro | `15px` | `600` | ink `#15120D` |
+| Bank full name (subtitle) | Be Vietnam Pro | `11px` | `400` | stone `#75716A` |
+| Card title | Fraunces | `22px` | `500` | ink |
+| Subtitle | Be Vietnam Pro | `12px` | `400` | stone |
+| Info label | Be Vietnam Pro | `10px` | `600` | stone (uppercase, `0.7px` tracking) |
+| Info value | Be Vietnam Pro | `14px` | `500` | ink |
+| Account number (mono) | JetBrains Mono | `15px` | `600` | ink |
+| Amount value | Fraunces | `28px` | `600` | accent `#0F4D34` |
+| NAPAS badge | JetBrains Mono | `9.5px` | `700` | accent on `#E8F0EB` |
+| Warning text | Be Vietnam Pro | `11px` | `400` | warn-ink `#6B4A12` |
+| Footer | JetBrains Mono | `10px` | `400` | stone-2 `#9A958C` |
+
+## Palette (CSS variables)
+
+- `--bg #ECE5D2`, `--card-bg #FFFFFF`
+- `--ink #15120D`, `--ink-2 #3A352D`
+- `--stone #75716A`, `--stone-2 #9A958C`
+- `--line #E5DFCD`, `--line-2 #F0EBDD`
+- `--accent #0F4D34` (green), `--accent-soft #E8F0EB`
+- `--gold #B8842B`
+- `--warn-bg #FBF3DF`, `--warn-line #E5C97A`, `--warn-ink #6B4A12`
 
 ## Info Rows
 
-The info table uses labels on the left and values on the right. The localized UI labels in the template are Vietnamese, for example account holder, account number, content, and amount.
-
-Each `.info-row` owns its bottom border:
+The info table uses labels on the left and values on the right. UI labels are Vietnamese (`Chủ TK`, `Số TK`, `Ngân hàng`, `Nội dung`). Dividers are dashed:
 
 ```css
 .info-row {
   display: flex;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px dashed var(--line);
 }
+.info-row:last-child { border-bottom: none; }
 ```
 
-Do not use `.info-row:last-child { border-bottom: none }` or adjacent sibling borders. Optional middle rows can be hidden, and those selector patterns leave orphan borders.
+Optional rows are hidden via the `[hidden]` attribute. Flex display overrides the browser's default hidden behavior, so keep:
+
+```css
+.info-row[hidden], .amount-row[hidden], .card-amount[hidden], .card-warn[hidden] { display: none !important; }
+```
 
 ## Optional Rows
 
 | Row | Required | Hidden when |
 |---|---:|---|
-| Account holder | No | `account_name` is empty. |
-| Account number | Yes | Never. |
-| Transfer content | No | `payment_content` is empty. |
-| Amount | No | `amount` is empty. |
+| Account holder (`Chủ TK`) | No | `account_name` is empty. |
+| Account number (`Số TK`) | Yes | Never. |
+| Bank (`Ngân hàng`) | Yes | Never (always shows bank short name). |
+| Transfer content (`Nội dung`) | No | `payment_content` is empty. |
+| Amount box | No | `amount` is `0`, `None`, or empty. |
 
-Flex display overrides the browser's default `[hidden]` behavior, so keep this rule:
+## Amount Box
 
-```css
-.info-row[hidden], .amount-row[hidden] { display: none !important; }
-```
+The amount block is a separate rounded box below the info table with a warm cream gradient background and a faint green radial glow in the corner. A subtle `VND` watermark sits in the bottom-right. The value is rendered as `Fraunces` accent green with a `đ` superscript. The renderer formats the numeric VND with `.` thousands separators.
+
+When `amount` is `0`, `None`, or empty, the entire `.card-amount` block is hidden.
+
+## Header Bank Logo
+
+- Real bank logos load from `assets/bank_logos/{code}.png` as base64-injected `<img>` (white padding inside the colored box).
+- When no logo file exists, the box gets a `placeholder` class: dark gradient background with the bank's short-name initials (max 3 chars) in Fraunces.
+
+## QR Center Logo
+
+The QR is rendered by `qr-code-styling` (loaded from `node_modules/qr-code-styling/lib/qr-code-styling.js`) with:
+- Dots: solid ink `#0E0E0C`, `dots` type.
+- Corner squares: `extra-rounded`, accent green.
+- Corner dots: `dot`, accent green.
+- Center image: bank logo at `imageSize: 0.22` when available.
 
 ## Visual Hierarchy
 
-- Keep amount as the strongest visual anchor: green, larger, bold.
-- Keep account number navy so it does not compete with amount.
-- Keep transfer content in slate and preserve user casing.
-- Use real bank logo images; do not replace logos with text or CSS approximations.
+- Amount is the strongest visual anchor: accent green, Fraunces serif, large.
+- Account number is the secondary anchor: JetBrains Mono, ink, slightly smaller.
+- Keep transfer content in ink, preserve user casing, do not uppercase.
 
 ## Warning Block
 
-The warning block uses a green success-style treatment:
-
-- Padding: `10px 16px`.
-- Border radius: `12px`.
-- Background: `#f0fdf4`.
-- Border: `#bbf7d0`.
-- Icon: `24px` green circle with checkmark.
-- Text: `13px`, green.
+- Padding: `10px 12px`.
+- Border radius: `8px`.
+- Background: `#FBF3DF` (warm), border `#E5C97A`.
+- Icon: `14px` triangular warning SVG in warn-ink.
+- Text: `11px`, warn-ink `#6B4A12`, bold keywords.

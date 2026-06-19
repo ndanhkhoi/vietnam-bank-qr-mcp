@@ -124,8 +124,10 @@ png_path = render_payment_card(
     bank_code=bank.code,           # short code cho logo.
     account_no="0123456789",
     account_name="NGUYEN VAN A",
-    amount=1000000,
+    amount=1000000,                # numeric VND; renderer tự format.
     payment_content="TEST TRANSFER",
+    bank_short_name=bank.short_name,
+    bank_full_name=bank.name,
 )
 print(png_path)
 
@@ -133,11 +135,13 @@ print(png_path)
 card_data = {
     "qr_data": qr_data,
     "bank_code": bank.code,         # Renderer dùng code ngắn để tìm logo.
-    "bank_name": bank.name,
+    "bank_name": bank.short_name,   # tên ngắn cho header.
+    "bank_full_name": bank.name,    # tên đầy đủ cho subtitle.
+    "bank_short_name": bank.short_name,
     "account_name": "NGUYEN VAN A",
     "account_no": "0123456789",
     "payment_content": "TEST TRANSFER",
-    "amount": "1.000.000 VND",     # String đã format cho card.
+    "amount": 1000000,              # numeric VND; 0/None sẽ ẩn amount box.
 }
 path = render_card(card_data, output_path="./qr_card.png")
 print(path)

@@ -89,11 +89,13 @@ qr_data = generate_qr_data(
 data = {
     "qr_data": qr_data,
     "bank_code": bank.code,  # short code for logo lookup.
-    "bank_name": bank.name,
+    "bank_name": bank.short_name,      # short name for card header.
+    "bank_full_name": bank.name,        # full name for header subtitle.
+    "bank_short_name": bank.short_name, # short name (also used as placeholder initials).
     "account_name": "NGUYEN VAN A",
     "account_no": "0123456789",
     "payment_content": "DONATE DEMO",
-    "amount": "10.000.000 VND",  # preformatted string for the card.
+    "amount": 10000000,  # numeric VND; renderer formats it. 0/None omits tag 54.
 }
 
 path = render_card(data, output_path="/tmp/qr_card.png")
@@ -120,7 +122,7 @@ PY
 - `render_payment_card()` returns a PNG absolute path; `generate_payment_card()` wraps it and returns bytes.
 - MCP `generate_payment_card` tool returns a JSON string with a `png_path` field, not an `Image` content block.
 - `search_banks()` is plural and returns a list; MCP `search_bank()` is singular and returns JSON.
-- Card `amount` is a preformatted string such as `"10.000.000 VND"`, not a number.
+- Card `amount` is a numeric VND value (e.g. `10000000`); the renderer formats it with thousands separators and a `đ` superscript. Pass `0` or `None` to omit the amount block.
 
 ## Rendering Pipeline
 
@@ -142,7 +144,7 @@ Rendering constraints:
 - Chromium binary resolves from `CHROMIUM_PATH` env var (read at call time); falls back to Playwright's bundled Chromium when unset. Set `CHROMIUM_PATH=/path/to/chrome` only when the bundled binary is unavailable.
 - Use `page.add_init_script()` before `page.goto()` to inject `window.__CARD_DATA__`.
 - Use `page.goto("file://...")`, not `set_content()`, so relative fonts, logos, and `node_modules` assets load.
-- Screenshot `body`, not `.card` or `.mac-window`, to preserve the 16px padding and shadow.
+- Screenshot `body`, not `.pay-card`, to preserve the 16px padding and shadow.
 - Wait for `document.fonts.ready`, images, and `#qr-canvas canvas` before taking the screenshot.
 - Keep `.info-row[hidden], .amount-row[hidden] { display: none !important; }`; flex rows override browser hidden defaults.
 
@@ -159,10 +161,10 @@ Rendering constraints:
 ## Card Design Notes
 
 - The current template is `mcp-server/templates/payment-card.html`.
-- The current visual style is a macOS window card with local Be Vietnam Pro fonts and browser-side `qr-code-styling`.
+- The current visual style is a flat card (no OS chrome) on a cream `#ECE5D2` background, with Fraunces (display) + Be Vietnam Pro (UI) + JetBrains Mono (numbers) loaded from `assets/fonts/`. Browser-side `qr-code-styling` renders the QR with a center bank logo.
 - Treat `references/template-design.md` and `references/qr-styling.md` as explanatory references, but verify numeric styling values against the live HTML template before changing code.
-- Keep real bank logos via `<img>` and QR center image; do not fake logos with CSS/text.
-- Keep account number navy and amount green so amount remains the only strong visual anchor.
+- Keep real bank logos via `<img>` and QR center image; do not fake logos with CSS/text. When a logo file is missing, the header logo box falls back to a dark placeholder with the bank's short-name initials.
+- Palette: ink `#15120D`, accent green `#0F4D34`, gold `#B8842B`. Amount uses accent green in Fraunces; account number uses ink in JetBrains Mono.
 - Do not uppercase transfer content for display.
 
 ## Response Format

@@ -159,22 +159,21 @@ def render_payment_card(
     account_name: str = "",
     amount: float | None = None,
     payment_content: str | None = None,
+    bank_short_name: str = "",
+    bank_full_name: str = "",
 ) -> str:
     """Render payment card PNG via HTML + Playwright. Returns PNG absolute path."""
-
-    if amount:
-        amount_str = f"{amount:,.0f} VNĐ".replace(",", ".")
-    else:
-        amount_str = ""
 
     card_data = {
         "qr_data": qr_data,
         "bank_code": bank_code,
-        "bank_name": bank_name,
+        "bank_name": bank_short_name or bank_name,
+        "bank_full_name": bank_full_name or bank_name,
+        "bank_short_name": bank_short_name,
         "account_name": account_name,
         "account_no": account_no,
         "payment_content": payment_content or "",
-        "amount": amount_str,
+        "amount": amount if (isinstance(amount, (int, float)) and amount > 0) else "",
     }
 
     from renderer import render_card
@@ -190,6 +189,8 @@ def generate_payment_card(
     account_name: str = "",
     amount: float | None = None,
     payment_content: str | None = None,
+    bank_short_name: str = "",
+    bank_full_name: str = "",
 ) -> bytes:
     """Generate payment card PNG via HTML + Playwright. Returns PNG bytes.
 
@@ -199,6 +200,7 @@ def generate_payment_card(
     from renderer import read_image_bytes
 
     png_path = render_payment_card(
-        qr_data, bank_name, bank_code, account_no, account_name, amount, payment_content
+        qr_data, bank_name, bank_code, account_no, account_name, amount,
+        payment_content, bank_short_name, bank_full_name,
     )
     return read_image_bytes(png_path)

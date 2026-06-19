@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=900, initial-scale=1.0" />
+  <meta name="viewport" content="width=560, initial-scale=1.0" />
   <title>QR Payment Card</title>
   <style>
     @font-face {
@@ -29,299 +29,453 @@
       font-weight: 700;
       font-display: block;
     }
+    @font-face {
+      font-family: "Fraunces";
+      src: url("../assets/fonts/Fraunces-Variable.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Fraunces";
+      src: url("../assets/fonts/Fraunces-Italic.woff2") format("woff2");
+      font-weight: 400 700;
+      font-style: italic;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("../assets/fonts/JetBrainsMono-Variable.woff2") format("woff2-variations");
+      font-weight: 100 800;
+      font-style: normal;
+      font-display: block;
+    }
 
     :root {
-      --navy: #0a1e3f;
-      --navy-value: #142b4f;
-      --muted: #6b7d99;
-      --muted-2: #9ba8bd;
-      --muted-3: #a1adbd;
-      --line: #e8edf5;
-      --line-soft: #edf1f6;
-      --green: #15803d;
-      --green-bg: #f0fdf4;
-      --green-border: #bbf7d0;
-      --card: #ffffff;
+      --bg: #ECE5D2;
+      --card-bg: #FFFFFF;
+      --ink: #15120D;
+      --ink-2: #3A352D;
+      --stone: #75716A;
+      --stone-2: #9A958C;
+      --line: #E5DFCD;
+      --line-2: #F0EBDD;
+      --accent: #0F4D34;
+      --accent-soft: #E8F0EB;
+      --gold: #B8842B;
+      --warn-bg: #FBF3DF;
+      --warn-line: #E5C97A;
+      --warn-ink: #6B4A12;
 
-      /* macOS chrome */
-      --mac-titlebar: #e8e9ed;
-      --mac-titlebar-border: #d1d3d8;
-      --mac-title-text: #3c3c3c;
-      --mac-close: #ff5f57;
-      --mac-min: #febc2e;
-      --mac-max: #28c840;
-
-      --mac-radius: 12px;
-      --mac-shadow: 0 30px 70px rgba(0, 0, 0, 0.18), 0 12px 30px rgba(0, 0, 0, 0.08);
-      --shadow-qr: 0 10px 28px rgba(15, 23, 42, 0.05);
+      --fs-title: 22px;
+      --fs-amount: 28px;
+      --fs-bank: 15px;
+      --fs-val: 14px;
+      --fs-mono: 15px;
+      --fs-label: 10px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
-      width: 900px;
+      width: 560px;
       font-family: "Be Vietnam Pro", -apple-system, system-ui, sans-serif;
-      background: #ffffff;
-      color: var(--navy);
+      background: var(--bg);
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
     }
 
-    body {
-      padding: 16px;
-    }
+    body { padding: 16px; }
 
-    /* ── macOS Window ─────────────────── */
-    .mac-window {
-      width: 100%;
-      background: var(--card);
-      border-radius: var(--mac-radius);
-      box-shadow: var(--mac-shadow);
+    .font-display { font-family: "Fraunces", serif; }
+    .font-mono { font-family: "JetBrains Mono", monospace; }
+
+    /* ===== Card ===== */
+    .pay-card {
+      width: 480px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.7) inset,
+        0 1px 2px rgba(21, 18, 13, 0.06),
+        0 24px 50px -20px rgba(21, 18, 13, 0.28),
+        0 10px 20px -10px rgba(21, 18, 13, 0.1);
       overflow: hidden;
+      position: relative;
+      color: var(--ink);
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
     }
+    .pay-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%2315120D' stroke-opacity='0.018' stroke-width='1'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+    .pay-card > * { position: relative; z-index: 1; }
 
-    .mac-titlebar {
+    /* Card top */
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--line-2);
+      gap: 12px;
+    }
+    .bank-info {
       display: flex;
       align-items: center;
-      height: 38px;
-      padding: 0 14px;
-      background: var(--mac-titlebar);
-      border-bottom: 1px solid var(--mac-titlebar-border);
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+    .bank-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      font-family: "Fraunces", serif;
+      font-weight: 600;
+      font-size: 18px;
+      color: white;
+      background: var(--accent);
       position: relative;
     }
-    .mac-traffic {
-      display: flex;
-      gap: 8px;
-      align-items: center;
+    .bank-logo.placeholder {
+      background: linear-gradient(135deg, #2A2520, #15120D);
+      color: var(--bg);
     }
-    .mac-dot {
-      width: 12px;
-      height: 12px;
+    .bank-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 5px;
+      background: white;
+    }
+    .bank-text { min-width: 0; flex: 1; }
+    .bank-name {
+      font-weight: 600;
+      font-size: var(--fs-bank);
+      line-height: 1.2;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bank-fullname {
+      font-size: calc(var(--fs-bank) - 4px);
+      color: var(--stone);
+      margin-top: 2px;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .napas-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 5px 9px 5px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      font-family: "JetBrains Mono", monospace;
+    }
+    .napas-badge::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
       border-radius: 50%;
     }
-    .mac-dot.close { background: var(--mac-close); }
-    .mac-dot.min   { background: var(--mac-min); }
-    .mac-dot.max   { background: var(--mac-max); }
-    .mac-title {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--mac-title-text);
-      letter-spacing: -0.01em;
-    }
 
-    .mac-content {
-      padding: 32px 40px 24px;
-    }
-
-    /* ── Title block ─────────────────── */
-    .title-block {
+    /* Card title */
+    .card-title {
+      padding: 18px 24px 12px;
       text-align: center;
-      margin-bottom: 20px;
     }
-    .title {
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--navy);
+    .card-title h2 {
+      font-family: "Fraunces", serif;
+      font-weight: 500;
+      font-size: var(--fs-title);
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      line-height: 1.2;
     }
-    .subtitle {
-      font-size: 15px;
-      font-weight: 400;
-      color: var(--muted-2);
-      margin-top: 4px;
+    .card-title p {
+      font-size: calc(var(--fs-label) + 2px);
+      color: var(--stone);
+      margin-top: 5px;
+      line-height: 1.4;
     }
 
-    /* ── QR section ─────────────────── */
-    .qr-section {
+    /* QR */
+    .card-qr {
+      padding: 4px 24px 16px;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
+      justify-content: center;
     }
     .qr-frame {
-      width: 420px;
-      height: 420px;
-      background: #fff;
+      width: 248px;
+      height: 248px;
+      background: white;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 16px;
-      box-shadow: var(--shadow-qr);
-      display: grid;
-      place-items: center;
+      border-radius: 14px;
+      padding: 14px;
+      position: relative;
+      box-shadow: 0 2px 8px -2px rgba(21, 18, 13, 0.08);
     }
-    .qr-frame canvas {
+    .qr-host {
+      width: 100%;
+      height: 100%;
+    }
+    .qr-host canvas {
       width: 100% !important;
       height: 100% !important;
     }
 
-    /* ── Bank section ─────────────────── */
-    .bank-section {
-      text-align: center;
-      margin-top: 4px;
-    }
-    .bank-logo {
-      display: block;
-      max-width: 220px;
-      max-height: 66px;
-      width: auto;
-      height: auto;
-      margin: 0 auto;
-      object-fit: contain;
-    }
-    .bank-name {
-      font-size: 19px;
-      font-weight: 600;
-      color: var(--muted);
-      margin-top: 7px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--line-soft);
-    }
-
-    /* ── Info table ─────────────────── */
-    .info {
-      margin-top: 16px;
-      padding: 0 8px;
+    /* Info rows */
+    .card-info {
+      padding: 2px 24px 4px;
     }
     .info-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 11px 0;
-      gap: 20px;
-      border-bottom: 1px solid var(--line-soft);
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--line);
+      gap: 16px;
     }
+    .info-row:last-child { border-bottom: none; }
     .info-label {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--muted);
+      font-size: var(--fs-label);
+      font-weight: 600;
+      color: var(--stone);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
       flex-shrink: 0;
+      padding-top: 2px;
+      width: 96px;
+      line-height: 1.4;
     }
     .info-value {
-      font-size: 19px;
-      font-weight: 600;
-      color: var(--navy-value);
+      font-size: var(--fs-val);
+      font-weight: 500;
+      color: var(--ink);
       text-align: right;
-      overflow-wrap: anywhere;
       word-break: break-word;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      display: -webkit-box;
-      -webkit-box-direction: normal;
-      overflow: hidden;
+      overflow-wrap: anywhere;
+      flex: 1;
+      line-height: 1.4;
     }
-    .info-value.account-no {
-      font-size: 21px;
-      font-weight: 700;
-      color: var(--navy-value);
-      letter-spacing: 0.01em;
-    }
-    .info-value.transfer-content {
+    .info-value.mono {
+      font-family: "JetBrains Mono", monospace;
+      font-size: var(--fs-mono);
       font-weight: 600;
-      color: #475569;
+      letter-spacing: 0.3px;
+      color: var(--ink);
     }
-    .info-value.amount {
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--green);
+    .info-value .sub {
+      display: block;
+      font-size: calc(var(--fs-val) - 3px);
+      color: var(--stone);
+      font-weight: 400;
+      margin-top: 2px;
+      font-family: "Be Vietnam Pro", sans-serif;
     }
 
-    /* ── Warning ─────────────────── */
-    .warning {
-      margin-top: 18px;
-      padding: 10px 16px;
+    /* Amount */
+    .card-amount {
+      margin: 12px 24px 0;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #F7F2E2 0%, #EFE8D2 100%);
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      gap: 16px;
+    }
+    .card-amount::before {
+      content: '';
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(15, 77, 52, 0.08), transparent 70%);
+      pointer-events: none;
+    }
+    .card-amount::after {
+      content: 'VND';
+      position: absolute;
+      bottom: 6px;
+      right: 10px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8px;
+      color: var(--stone-2);
+      letter-spacing: 1px;
+      font-weight: 600;
+      opacity: 0.6;
+    }
+    .amount-label {
+      font-size: var(--fs-label);
+      font-weight: 600;
+      color: var(--ink-2);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      line-height: 1.4;
+      z-index: 1;
+    }
+    .amount-value {
+      font-family: "Fraunces", serif;
+      font-size: var(--fs-amount);
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: -0.015em;
+      line-height: 1;
+      z-index: 1;
+      white-space: nowrap;
+    }
+    .amount-value sup {
+      font-size: 0.5em;
+      font-weight: 500;
+      margin-left: 3px;
+      color: var(--accent);
+      top: -0.55em;
+      position: relative;
+    }
+
+    /* Warning */
+    .card-warn {
+      margin: 14px 24px 0;
+      padding: 10px 12px;
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-line);
+      border-radius: 8px;
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      font-size: 11px;
+      color: var(--warn-ink);
+      line-height: 1.45;
+    }
+    .card-warn svg {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      margin-top: 1px;
+    }
+    .card-warn b { font-weight: 700; }
+
+    /* Footer */
+    .card-footer {
+      margin-top: 14px;
+      padding: 12px 24px;
+      border-top: 1px solid var(--line-2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--stone-2);
+      letter-spacing: 0.3px;
+    }
+    .card-footer .gen {
       display: flex;
       align-items: center;
-      gap: 10px;
-      border-radius: 12px;
-      background: var(--green-bg);
-      border: 1px solid var(--green-border);
+      gap: 6px;
+      font-family: "JetBrains Mono", monospace;
     }
-    .warning-icon {
-      flex: 0 0 auto;
-      width: 24px;
-      height: 24px;
+    .card-footer .gen b {
+      color: var(--stone);
+      font-weight: 600;
+      font-family: "Fraunces", serif;
+      font-style: italic;
+      font-size: 11px;
     }
-    .warning-text {
-      font-size: 13px;
-      font-weight: 400;
-      line-height: 1.4;
-      color: var(--green);
-      letter-spacing: -0.01em;
+    .card-footer .ts {
+      font-family: "JetBrains Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
 
-    /* ── Footer ─────────────────── */
-    .footer {
-      margin-top: 14px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--muted-3);
-    }
-
-    .info-row[hidden], .amount-row[hidden] { display: none !important; }
+    .info-row[hidden], .amount-row[hidden], .bank-fullline[hidden],
+    .card-amount[hidden], .card-warn[hidden] { display: none !important; }
   </style>
 </head>
 
 <body>
-  <div class="mac-window">
-    <!-- Title bar -->
-    <div class="mac-titlebar">
-      <div class="mac-traffic">
-        <span class="mac-dot close"></span>
-        <span class="mac-dot min"></span>
-        <span class="mac-dot max"></span>
+  <div class="pay-card">
+    <div class="card-top">
+      <div class="bank-info">
+        <div class="bank-logo" id="bank-logo-box">
+          <img id="bank-logo" alt="" />
+        </div>
+        <div class="bank-text">
+          <div class="bank-name" id="bank-name"></div>
+          <div class="bank-fullname" id="bank-fullname"></div>
+        </div>
       </div>
-      <span class="mac-title">Chuyển khoản — Napas QR</span>
+      <div class="napas-badge">Napas QR</div>
     </div>
 
-    <!-- Content -->
-    <div class="mac-content">
-      <div class="title-block">
-        <div class="title">Quét mã để chuyển khoản</div>
-        <div class="subtitle">Scan QR bằng ứng dụng ngân hàng</div>
-      </div>
+    <div class="card-title">
+      <h2>Quét mã để chuyển khoản</h2>
+      <p>Mở app ngân hàng và quét mã QR bên dưới</p>
+    </div>
 
-      <div class="qr-section">
-        <div class="qr-frame">
-          <div id="qr-canvas"></div>
-        </div>
-        <div class="bank-section">
-          <img class="bank-logo" id="bank-logo" alt="" />
-          <div class="bank-name" id="bank-name"></div>
-        </div>
+    <div class="card-qr">
+      <div class="qr-frame">
+        <div class="qr-host" id="qr-canvas"></div>
       </div>
+    </div>
 
-      <div class="info">
-        <div class="info-row" id="account-name-row">
-          <span class="info-label">Chủ tài khoản</span>
-          <span class="info-value" id="account-name"></span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Số tài khoản</span>
-          <span class="info-value account-no" id="account-no"></span>
-        </div>
-        <div class="info-row" id="transfer-content-row">
-          <span class="info-label">Nội dung</span>
-          <span class="info-value transfer-content" id="transfer-content"></span>
-        </div>
-        <div class="info-row amount-row" id="amount-row">
-          <span class="info-label">Số tiền</span>
-          <span class="info-value amount" id="amount"></span>
-        </div>
+    <div class="card-info">
+      <div class="info-row" id="account-name-row">
+        <span class="info-label">Chủ TK</span>
+        <span class="info-value" id="account-name"></span>
       </div>
-
-      <div class="warning">
-        <svg class="warning-icon" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" fill="#15803d"/>
-          <path d="M8 12.5l2.5 2.5L16 9.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="warning-text">Vui lòng kiểm tra đúng tên tài khoản, số tài khoản và ngân hàng trước khi chuyển.</span>
+      <div class="info-row">
+        <span class="info-label">Số TK</span>
+        <span class="info-value mono" id="account-no"></span>
       </div>
+      <div class="info-row" id="bank-row">
+        <span class="info-label">Ngân hàng</span>
+        <span class="info-value" id="bank-short-name"></span>
+      </div>
+      <div class="info-row" id="transfer-content-row">
+        <span class="info-label">Nội dung</span>
+        <span class="info-value" id="transfer-content"></span>
+      </div>
+    </div>
 
-      <div class="footer">Generated by khoinda</div>
+    <div class="card-amount amount-row" id="amount-row">
+      <span class="amount-label">Số tiền<br>chuyển khoản</span>
+      <span class="amount-value" id="amount"></span>
+    </div>
+
+    <div class="card-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Vui lòng kiểm tra đúng <b>tên tài khoản</b>, <b>số tài khoản</b> và <b>ngân hàng</b> trước khi chuyển.</span>
+    </div>
+
+    <div class="card-footer">
+      <div class="gen">Generated by <b>khoinda</b></div>
+      <div class="ts">Napas · EMV QR</div>
     </div>
   </div>
 
@@ -329,15 +483,28 @@
   <script>
     const params = window.__CARD_DATA__ || {};
 
+    // Bank logo (top): inject base64, or fallback to placeholder initials
+    const bankLogoBox = document.getElementById('bank-logo-box');
+    const bankLogoImg = document.getElementById('bank-logo');
     if (params.bank_logo_base64) {
-      document.getElementById('bank-logo').src = 'data:image/png;base64,' + params.bank_logo_base64;
+      bankLogoImg.src = 'data:image/png;base64,' + params.bank_logo_base64;
     } else {
-      document.getElementById('bank-logo').style.display = 'none';
+      bankLogoBox.classList.add('placeholder');
+      const shortName = (params.bank_short_name || params.bank_name || 'BANK').slice(0, 3).toUpperCase();
+      bankLogoBox.textContent = shortName;
+      bankLogoImg.style.display = 'none';
     }
+
     document.getElementById('bank-name').textContent = params.bank_name || '';
+    if (params.bank_full_name) {
+      document.getElementById('bank-fullname').textContent = params.bank_full_name;
+    } else {
+      document.getElementById('bank-fullname').hidden = true;
+    }
+    document.getElementById('bank-short-name').textContent = params.bank_name || '';
     document.getElementById('account-no').textContent = params.account_no || '';
 
-    // Optional rows — ẩn nếu rỗng
+    // Optional rows — hide if empty
     const accountName = params.account_name || '';
     if (accountName) {
       document.getElementById('account-name').textContent = accountName;
@@ -352,46 +519,31 @@
       document.getElementById('transfer-content-row').hidden = true;
     }
 
-    if (params.amount) {
-      document.getElementById('amount').textContent = params.amount;
+    if (params.amount && Number(params.amount) > 0) {
+      document.getElementById('amount').innerHTML = params.amount + '<sup>đ</sup>';
     } else {
       document.getElementById('amount-row').hidden = true;
     }
 
-    // Styled QR — premium subtle
+    // Styled QR with embedded bank logo at center
     const qrCode = new QRCodeStyling({
-      width: 388,
-      height: 388,
+      width: 220,
+      height: 220,
       type: 'canvas',
       data: params.qr_data || 'placeholder',
-      margin: 10,
+      margin: 6,
       dotsOptions: {
         type: 'dots',
-        gradient: {
-          type: 'linear',
-          rotation: Math.PI / 6,
-          colorStops: [
-            { offset: 0, color: '#1a3a6b' },
-            { offset: 0.5, color: '#142b4f' },
-            { offset: 1, color: '#0a1e3f' },
-          ],
-        },
+        color: '#0E0E0C',
       },
       backgroundOptions: { color: '#ffffff' },
       cornersSquareOptions: {
         type: 'extra-rounded',
-        gradient: {
-          type: 'linear',
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: '#16a34a' },
-            { offset: 1, color: '#15803d' },
-          ],
-        },
+        color: '#0F4D34',
       },
       cornersDotOptions: {
         type: 'dot',
-        color: '#15803d',
+        color: '#0F4D34',
       },
       image: params.bank_logo_base64 ? 'data:image/png;base64,' + params.bank_logo_base64 : '',
       imageOptions: {

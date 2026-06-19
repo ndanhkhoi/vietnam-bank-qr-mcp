@@ -14,41 +14,26 @@ Verify these values against `mcp-server/templates/payment-card.html` before chan
 
 ```javascript
 const qrCode = new QRCodeStyling({
-  width: 388,
-  height: 388,
+  width: 220,
+  height: 220,
   type: 'canvas',
   data: params.qr_data,
-  margin: 10,
+  margin: 6,
 
   dotsOptions: {
     type: 'dots',
-    gradient: {
-      type: 'linear',
-      rotation: Math.PI / 6,
-      colorStops: [
-        { offset: 0, color: '#1a3a6b' },
-        { offset: 0.5, color: '#142b4f' },
-        { offset: 1, color: '#0a1e3f' },
-      ],
-    },
+    color: '#0E0E0C',
   },
 
   backgroundOptions: { color: '#ffffff' },
 
   cornersSquareOptions: {
     type: 'extra-rounded',
-    gradient: {
-      type: 'linear',
-      rotation: 0,
-      colorStops: [
-        { offset: 0, color: '#16a34a' },
-        { offset: 1, color: '#15803d' },
-      ],
-    },
+    color: '#0F4D34',
   },
   cornersDotOptions: {
     type: 'dot',
-    color: '#15803d',
+    color: '#0F4D34',
   },
 
   image: params.bank_logo_base64 ? 'data:image/png;base64,' + params.bank_logo_base64 : '',
@@ -65,6 +50,6 @@ qrCode.append(document.getElementById('qr-canvas'));
 ## Scannability Rules
 
 - Keep `imageSize` at or below `0.25`; the current logo size is `0.22`.
-- Keep navy-on-white contrast for QR dots.
+- Keep ink-on-white contrast for QR dots (solid `#0E0E0C`).
 - Keep `hideBackgroundDots: true` so the centered logo does not interfere with modules.
 - If scanning becomes unreliable, reduce `imageSize` to `0.15` or remove the centered logo.
