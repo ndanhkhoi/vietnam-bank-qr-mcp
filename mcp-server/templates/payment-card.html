@@ -524,7 +524,7 @@
       document.getElementById('transfer-content-row').hidden = true;
     }
 
-    if (params.amount && Number(params.amount) > 0) {
+    if (params.amount) {
       document.getElementById('amount').innerHTML = params.amount + '<sup>đ</sup>';
     } else {
       document.getElementById('amount-row').hidden = true;
